@@ -13,7 +13,7 @@ export default function Footer() {
 
                 {/* Right side */}
                 <div className="text-center md:text-left  md:mb-0">
-                    © {new Date().getFullYear()} Flamboyant Technologies. All rights reserved.
+                    © {new Date().getFullYear()} Travel Food Services. All rights reserved.
                 </div>
             </div>
         </footer>

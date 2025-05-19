@@ -20,11 +20,9 @@ export default function Page() {
           body: JSON.stringify({ documentNo: decodedDocNo }),
         });
 
-        const json = await res.json();
+        const rawXML = await res.text();
 
         if (res.ok) {
-          const rawXML = json.rawXML;
-
           const parser = new DOMParser();
           const xmlDoc = parser.parseFromString(rawXML, "text/xml");
 
@@ -37,7 +35,7 @@ export default function Page() {
             setError("return_value not found in XML");
           }
         } else {
-          setError(json.error || "Failed to fetch PO data");
+          setError("Failed to fetch PO data");
         }
       } catch (err: any) {
         setError(err.message || "An error occurred");
@@ -48,6 +46,7 @@ export default function Page() {
       fetchData();
     }
   }, [documentNo]);
+
 
   return (
     <div className="p-6 mt-10">
@@ -63,7 +62,9 @@ export default function Page() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <p><strong>PO Number:</strong> {poData.DocumentNo}</p>
               <p><strong>Vendor Name:</strong> {poData.BuyFromVendorName}</p>
+              <p><strong>Vendor No:</strong> {poData.BuyFromVendorNo}</p>
               <p><strong>Order Date:</strong> {poData.OrderDate}</p>
+              <p><strong>Store Name:</strong> {poData.StoreName}</p>
               <p><strong>Store No:</strong> {poData.StoreNo}</p>
             </div>
           </div>
@@ -75,16 +76,13 @@ export default function Page() {
               <table className="w-full text-sm border border-gray-300">
                 <thead>
                   <tr className="bg-pink-200">
-                    <th className="border px-2 py-1" rowSpan={3}>S No.</th>
-                    <th className="border px-2 py-1">Name</th>
+                    <th className="border px-2 py-1">S No.</th>
+                    <th className="border px-2 py-1">Item Name</th>
                     <th className="border px-2 py-1">Quantity</th>
                     <th className="border px-2 py-1">Rate</th>
-                    <th className="border px-2 py-1">GST</th>
-                  </tr>
-                  <tr className="bg-gray-200">
-                    <td className="border px-2 py-1 font-bold text-center">Previous Rate</td>
-                    <td className="border px-2 py-1 font-bold text-center">Order Date</td>
-                    <td className="border px-2 py-1 font-bold text-center" colSpan={2}>Total</td>
+                    <th className="border px-2 py-1">Net Amount</th>
+                    <th className="border px-2 py-1">GST Amount</th>
+                    <th className="border px-2 py-1">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -92,28 +90,40 @@ export default function Page() {
                     const rate = parseFloat(item.DirectUnitCost.replace(/,/g, ""));
                     const quantity = parseFloat(item.Quantity);
                     const gst = parseFloat(item.GstAmount);
-                    const total = (rate * quantity) + gst;
+                    const netTotal = rate * quantity;
+                    const total = netTotal + gst;
 
                     return (
-                      <React.Fragment key={index}>
-                        <tr className="bg-pink-200">
-                          <td className="border px-2 py-1" rowSpan={2}>{index + 1}</td>
-                          <td className="border px-2 py-1">{item.Description}</td>
-                          <td className="border px-2 py-1">{item.Quantity}</td>
-                          <td className="border px-2 py-1">₹{rate.toFixed(2)}</td>
-                          <td className="border px-2 py-1">₹{gst.toFixed(2)}</td>
-                        </tr>
-                        <tr className="bg-gray-200">
-                          <td className="border px-2 py-1">₹{rate.toFixed(2)}</td>
-                          <td className="border px-2 py-1">{poData.OrderDate}</td>
-                          <td className="border px-2 py-1" colSpan={2}>₹{total.toFixed(2)}</td>
-                        </tr>
-                      </React.Fragment>
+                      <tr key={index} className="bg-pink-50">
+                        <td className="border px-2 py-1 text-center">{index + 1}</td>
+                        <td className="border px-2 py-1 text-left">{item.Description}</td>
+                        <td className="border px-2 py-1 text-center">{quantity}</td>
+                        <td className="border px-2 py-1 text-center">₹{rate.toFixed(2)}</td>
+                        <td className="border px-2 py-1 text-center">₹{netTotal.toFixed(2)}</td>
+                        <td className="border px-2 py-1 text-center">₹{gst.toFixed(2)}</td>
+                        <td className="border px-2 py-1 text-center">₹{total.toFixed(2)}</td>
+                      </tr>
                     );
                   })}
-                  <tr className="bg-sky-100 font-bold">
-                    <td className="border px-2 py-2 text-center" colSpan={3}>Grand Total</td>
-                    <td className="border px-2 py-2 text-center text-green-700" colSpan={2}>
+
+                  {/* Grand Total Row */}
+                  <tr className="bg-sky-100 font-bold text-right">
+                    <td className="border px-2 py-2 text-center" colSpan={2}>Grand Total</td>
+                    <td className="border px-2 py-2 text-center">
+                      {poData.Lines.reduce((sum, item) => sum + parseFloat(item.Quantity), 0)} items
+                    </td>
+                    <td className="border px-2 py-2"></td>
+                    <td className="border px-2 py-2 text-center">
+                      ₹{poData.Lines.reduce((sum, item) => {
+                        const rate = parseFloat(item.DirectUnitCost.replace(/,/g, ""));
+                        const qty = parseFloat(item.Quantity);
+                        return sum + (rate * qty);
+                      }, 0).toFixed(2)}
+                    </td>
+                    <td className="border px-2 py-2 text-center">
+                      ₹{poData.Lines.reduce((sum, item) => sum + parseFloat(item.GstAmount), 0).toFixed(2)}
+                    </td>
+                    <td className="border px-2 py-2 text-center text-green-700">
                       ₹{poData.Lines.reduce((sum, item) => {
                         const rate = parseFloat(item.DirectUnitCost.replace(/,/g, ""));
                         const qty = parseFloat(item.Quantity);
@@ -123,8 +133,8 @@ export default function Page() {
                     </td>
                   </tr>
                 </tbody>
-
               </table>
+
             </div>
           </div>
         </div>

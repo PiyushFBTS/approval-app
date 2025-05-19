@@ -26,7 +26,7 @@ export default function Header() {
 
             {/* Branch name - center on medium+ screens, inline on mobile */}
             <div className="text-center flex-1 mx-2 text-sm md:text-lg font-medium truncate">
-                <h2>Flamboyant technologies</h2>
+                <h2>Travel Food Services</h2>
             </div>
 
             {/* Refresh Button */}

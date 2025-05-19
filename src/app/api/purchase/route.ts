@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import httpntlm from 'httpntlm';
 
-function makeNtlmRequest(documentNo: string): Promise<NextResponse> {
+function makeNtlmRequest(documentNo: string): Promise<Response> {
   const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
-    <Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/">
-      <Body>
-        <PurchaseOrder xmlns="urn:microsoft-dynamics-schemas/codeunit/PO_Approval_API">
-          <documentNo>${documentNo}</documentNo>
-        </PurchaseOrder>
-      </Body>
-    </Envelope>`;
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <PurchaseOrder xmlns="urn:microsoft-dynamics-schemas/codeunit/PO_Approval_API">
+      <documentNo>${documentNo}</documentNo>
+    </PurchaseOrder>
+  </soap:Body>
+</soap:Envelope>`;
 
   return new Promise((resolve, reject) => {
     httpntlm.post(
@@ -27,13 +27,17 @@ function makeNtlmRequest(documentNo: string): Promise<NextResponse> {
       },
       (err: any, res: any) => {
         if (err) {
-          return resolve(NextResponse.json({ error: err.message }, { status: 500 }));
+          return resolve(
+            NextResponse.json({ error: err.message }, { status: 500 })
+          );
         }
 
         resolve(
-          NextResponse.json({
-            rawXML: res.body,
-            statusCode: res.statusCode,
+          new Response(res.body, {
+            status: res.statusCode,
+            headers: {
+              'Content-Type': 'text/xml',
+            },
           })
         );
       }
@@ -50,8 +54,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       return NextResponse.json({ error: "Missing documentNo" }, { status: 400 });
     }
 
-    const response = await makeNtlmRequest(documentNo);
-    return response;
+    return await makeNtlmRequest(documentNo);
   } catch (error: any) {
     console.error("Catch Block Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
