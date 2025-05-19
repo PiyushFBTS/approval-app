@@ -15,6 +15,7 @@ export type PurchaseOrder = {
   BuyFromVendorNo: string;
   BuyFromVendorName: string;
   StoreNo: string;
+  StoreName:string
   OrderDate: string;
   TotalAmount: string;
   Lines: LineItem[];
