@@ -18,5 +18,6 @@ export type PurchaseOrder = {
   StoreName:string
   OrderDate: string;
   TotalAmount: string;
+  ApprovalStatus:string;
   Lines: LineItem[];
 };
