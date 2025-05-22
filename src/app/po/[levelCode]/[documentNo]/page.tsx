@@ -15,6 +15,8 @@ export default function Page() {
     const params = useParams();
     const levelCode = params?.levelCode as string;
     const documentNo = params?.documentNo as string;
+    const [showRejectReason, setShowRejectReason] = useState(false);
+    const [rejectComment, setRejectComment] = useState("");
 
     const approvalLevel = levelMap[levelCode];
     const [poData, setPoData] = useState<PurchaseOrder | null>(null);
@@ -52,10 +54,15 @@ export default function Page() {
         };
 
         if (documentNo) fetchData();
-    }, [documentNo,refresh]);
+    }, [documentNo, refresh]);
 
     const handleApprovalAction = async (status: 2 | 3) => {
         setLoading(true);
+        if (status === 3 && rejectComment.trim() === "") {
+            alert("Please provide a reason for rejection.");
+            setLoading(false);
+            return;
+        }
 
         try {
             const decodedDocNo = decodeURIComponent(documentNo as string);
@@ -66,13 +73,16 @@ export default function Page() {
                     documentNo: decodedDocNo,
                     approvalStatus: status,
                     approvalLevel: approvalLevel,
+                    comment: status === 3 ? rejectComment : "" // send comment only for rejection
                 }),
             });
 
             const responseText = await res.text();
 
             if (res.ok) {
-                setRefresh(true)
+                setRefresh(prev => !prev);
+                setShowRejectReason(false);
+                setRejectComment("");
             }
         } catch (err: any) {
             console.error("Error: " + err.message);
@@ -102,48 +112,51 @@ export default function Page() {
                         </div>
 
                         {/* Approval Actions */}
-                        <div className="my-4">
-                            {poData?.ApprovalStatus === 'Approved' && <p className="text-sm text-green-500 font-bold">Already Approved</p>}
-                            {poData?.ApprovalStatus === 'Rejected' && <p className="text-sm text-red-500 font-bold">Already Rejected</p>}
-                        </div>
-                        <div className="flex gap-3 mt-4">
-                            <Button onClick={() => handleApprovalAction(2)} variant="ghost" disabled={poData?.ApprovalStatus === 'Approved' || poData?.ApprovalStatus === 'Rejected'} className="bg-green-600 hover:bg-green-700 text-white hover:text-white" >
-                                {loading ? (
+
+                        <div className="flex flex-col gap-3 mt-4">
+                            {poData && (() => {
+                                const levelStr = `Level${approvalLevel}`;
+                                const isSameLevel = poData.ApprovalLevel === levelStr;
+                                const isFinalized = poData.ApprovalStatus === 'Approved' || poData.ApprovalStatus === 'Rejected';
+                                const isDisabled = !isSameLevel || isFinalized;
+                                return (
                                     <>
-                                        <span className="mr-2">
-                                            <svg
-                                                className="animate-spin h-4 w-4 text-white"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <circle
-                                                    className="opacity-25"
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                    stroke="currentColor"
-                                                    strokeWidth="4"
-                                                ></circle>
-                                                <path
-                                                    className="opacity-75"
-                                                    fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                ></path>
-                                            </svg>
-                                        </span>
-
+                                        <div className="flex gap-3">
+                                            <Button onClick={() => handleApprovalAction(2)} disabled={isDisabled} className="bg-green-600 hover:bg-green-700 text-white hover:text-white">
+                                                Approve
+                                            </Button>
+                                            <Button onClick={() => setShowRejectReason(true)} disabled={isDisabled} variant="destructive">
+                                                Reject
+                                            </Button>
+                                        </div>
+                                        {isDisabled && (
+                                            <p className="text-xs text-gray-500 italic mt-1">
+                                                {isFinalized
+                                                    ? `This PO is  ${poData.ApprovalStatus}.`
+                                                    : `Approval available at ${poData.ApprovalLevel}.`}
+                                            </p>
+                                        )}
+                                        {showRejectReason && (
+                                            <div className="mt-2">
+                                                <textarea value={rejectComment} onChange={(e) => setRejectComment(e.target.value)} placeholder="Enter rejection reason" className="w-full border p-2 rounded" />
+                                                <div className="flex gap-2 mt-2">
+                                                    <Button onClick={() => handleApprovalAction(3)} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white">
+                                                        Confirm Reject
+                                                    </Button>
+                                                    <Button variant="outline" onClick={() => {
+                                                        setShowRejectReason(false)
+                                                        setRejectComment("");
+                                                    }}>
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </>
-                                ) : "Approve"}
-                            </Button>
-                            <Button onClick={() => handleApprovalAction(3)} disabled={poData?.ApprovalStatus === 'Approved' || poData?.ApprovalStatus === 'Rejected'}
-                                variant="destructive">
-                                Reject
-                            </Button>
+                                );
+                            })()}
                         </div>
-
                     </div>
-
 
                     {/* Line Items Table  */}
                     <div className="bg-white p-2 rounded shadow">
@@ -168,7 +181,6 @@ export default function Page() {
                                         const gst = parseFloat(item.GstAmount);
                                         const netTotal = rate * quantity;
                                         const total = netTotal + gst;
-
                                         return (
                                             <tr key={index} className="bg-pink-50">
                                                 <td className="border px-2 py-1 text-center">{index + 1}</td>
@@ -210,7 +222,6 @@ export default function Page() {
                                     </tr>
                                 </tbody>
                             </table>
-
                         </div>
                     </div>
                 </div>
