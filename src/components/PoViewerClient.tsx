@@ -28,11 +28,14 @@ export default function PoViewerClient({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const decodedDocNo = decodeURIComponent(documentNo);
+
         const res = await fetch("/api/purchase", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ documentNo: decodedDocNo }),
+          body: JSON.stringify({
+            documentNo,
+            companyName
+          }),
         });
 
         const rawXML = await res.text();
@@ -68,12 +71,11 @@ export default function PoViewerClient({
     }
 
     try {
-      const decodedDocNo = decodeURIComponent(documentNo);
       const res = await fetch("/api/approval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          documentNo: decodedDocNo,
+          documentNo,
           approvalStatus: status,
           approvalLevel: approvalLevel,
           comment: status === 3 ? rejectComment : "",
