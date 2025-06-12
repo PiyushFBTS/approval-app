@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import httpntlm from 'httpntlm';
 
-function makeNtlmRequest(documentNo: string, approvalStatus: any, approvalLevel: number,comment:string): Promise<Response> {
+function makeNtlmRequest(documentNo: string, approvalStatus: any, approvalLevel: number, comment: string, companyName: string): Promise<Response> {
   const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
     <soap:Body>
@@ -9,7 +9,7 @@ function makeNtlmRequest(documentNo: string, approvalStatus: any, approvalLevel:
         <orderID>${documentNo}</orderID>
         <approvalStatus>${approvalStatus}</approvalStatus>
         <approvalLevel>${approvalLevel}</approvalLevel>
-                     <comment>${comment}</comment>
+        <comment>${comment}</comment>
       </GetApprovalStatus>
     </soap:Body>
   </soap:Envelope>`;
@@ -17,7 +17,7 @@ function makeNtlmRequest(documentNo: string, approvalStatus: any, approvalLevel:
   return new Promise((resolve) => {
     httpntlm.post(
       {
-        url: 'https://nav_auto.travelfoodservices.com:1048/Nas/WS/TFSPL%20HO/Codeunit/PO_Approval_API',
+        url: `https://nav_auto.travelfoodservices.com:1048/Nas/WS/${companyName}/Codeunit/PO_Approval_API`,
         username: 'Navjobrun',
         password: '&075JFAAWRNnEav',
         domain: 'TFS_NAV',
@@ -43,23 +43,22 @@ function makeNtlmRequest(documentNo: string, approvalStatus: any, approvalLevel:
           })
         );
 
-        console.log("SOAP Response Body:", res.body);
+        
       }
     );
   });
 }
 
-
 export async function POST(req: NextRequest): Promise<Response> {
   try {
     const body = await req.json();
-    const { documentNo, approvalStatus, approvalLevel,comment } = body;
+    const { documentNo, approvalStatus, approvalLevel, comment, companyName } = body;
 
-    if (!documentNo) {
-      return NextResponse.json({ error: "Missing documentNo" }, { status: 400 });
+    if (!documentNo || !companyName) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    return await makeNtlmRequest(documentNo, approvalStatus, approvalLevel,comment);
+    return await makeNtlmRequest(documentNo, approvalStatus, approvalLevel, comment, companyName);
   } catch (error: any) {
     console.error("Catch Block Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
